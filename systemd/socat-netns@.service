@@ -1,0 +1,11 @@
+[Unit]
+Description=Using socat to redirect a port to another netns %I
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/socat-netns-service %i
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

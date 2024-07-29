@@ -1,0 +1,91 @@
+#!/bin/bash
+
+# Check if sufficient arguments are provided
+if [ $# -ne 5 ]; then
+    echo "Usage: $0 <protocol> <source netns or 'default'> <source port> <destination netns or 'default'> <destination port>"
+    exit 1
+fi
+
+protocol=$1
+source_ns=$2
+source_port=$3
+dest_ns=$4
+dest_port=$5
+
+# Check if the protocol is either tcp or udp
+if [ "$protocol" != "tcp" ] && [ "$protocol" != "udp" ]; then
+    echo "Error: Protocol must be either 'tcp' or 'udp'."
+    exit 1
+fi
+
+# Check if the ports are valid numbers
+if ! [[ "$source_port" =~ ^[0-9]+$ ]]; then
+    echo "Error: Source port must be a number."
+    exit 1
+fi
+
+if ! [[ "$dest_port" =~ ^[0-9]+$ ]]; then
+    echo "Error: Destination port must be a number."
+    exit 1
+fi
+
+# Wait for network namespaces to be ready
+wait_time=0
+max_wait=20
+
+echo "Waiting for network namespaces to be ready..."
+while [ $wait_time -lt $max_wait ]; do
+    # Check if both namespaces are available
+    source_available=0
+    dest_available=0
+
+    if [ "$source_ns" = "default" ] || ip netns list | grep -q "$source_ns"; then
+        source_available=1
+    fi
+    if [ "$dest_ns" = "default" ] || ip netns list | grep -q "$dest_ns"; then
+        dest_available=1
+    fi
+
+    if [ $source_available -eq 1 ] && [ $dest_available -eq 1 ]; then
+        echo
+        break
+    else
+        echo -n "."
+        sleep 1
+        ((wait_time++))
+    fi
+done
+
+if [ $wait_time -eq $max_wait ]; then
+    echo
+    if [ $source_available -eq 0 ]; then
+        echo "Network namespace '$source_ns' does not exist."
+    fi
+    if [ $dest_available -eq 0 ]; then
+        echo "Network namespace '$dest_ns' does not exist."
+    fi
+    exit 1
+fi
+
+# Setup socat commands
+if [ "$source_ns" = "default" ]; then
+    source_socat="socat"
+else
+    source_socat="ip netns exec $source_ns socat"
+fi
+
+if [ "$dest_ns" = "default" ]; then
+    dest_socat="socat"
+else
+    dest_socat="ip netns exec $dest_ns socat"
+fi
+
+# Construct and execute the final command
+if [ "$protocol" = "tcp" ]; then
+    final_command="$source_socat $protocol-LISTEN:$source_port,reuseaddr,fork EXEC:'$dest_socat STDIO \"$protocol-CONNECT:127.0.0.1:$dest_port\"'"
+else
+    final_command="$source_socat $protocol-RECVFROM:$source_port,reuseaddr,fork EXEC:'$dest_socat -u STDIO \"$protocol-SENDTO:127.0.0.1:$dest_port\"'"
+fi
+
+echo "Running command: $final_command"
+eval "$final_command"
