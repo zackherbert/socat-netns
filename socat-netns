@@ -75,7 +75,7 @@ else
 fi
 
 if [ "$dest_ns" = "default" ]; then
-    dest_socat="socat"
+    dest_socat="nsenter -t 1 -n socat"
 else
     dest_socat="ip netns exec $dest_ns socat"
 fi
