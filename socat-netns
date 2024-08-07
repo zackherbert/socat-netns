@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Check if sufficient arguments are provided
-if [ $# -ne 5 ]; then
-    echo "Usage: $0 <protocol> <source netns or 'default'> <source port> <destination netns or 'default'> <destination port>"
+if [ $# -lt 5 ]; then
+    echo "Usage: $0 <protocol> <source netns or 'default'> <source port> <destination netns or 'default'> <destination port> [<destination ip address>]"
     exit 1
 fi
 
@@ -11,6 +11,11 @@ source_ns=$2
 source_port=$3
 dest_ns=$4
 dest_port=$5
+ip_address=$6
+
+if [ -z "$ip_address" ]; then
+    ip_address=127.0.0.1
+fi
 
 # Check if the protocol is either tcp or udp
 if [ "$protocol" != "tcp" ] && [ "$protocol" != "udp" ]; then
@@ -82,9 +87,9 @@ fi
 
 # Construct and execute the final command
 if [ "$protocol" = "tcp" ]; then
-    final_command="$source_socat $protocol-LISTEN:$source_port,reuseaddr,fork EXEC:'$dest_socat STDIO \"$protocol-CONNECT:127.0.0.1:$dest_port\"'"
+    final_command="$source_socat $protocol-LISTEN:$source_port,reuseaddr,fork EXEC:'$dest_socat STDIO \"$protocol-CONNECT:$ip_address:$dest_port\"'"
 else
-    final_command="$source_socat $protocol-RECVFROM:$source_port,reuseaddr,fork EXEC:'$dest_socat -u STDIO \"$protocol-SENDTO:127.0.0.1:$dest_port\"'"
+    final_command="$source_socat $protocol-RECVFROM:$source_port,reuseaddr,fork EXEC:'$dest_socat -u STDIO \"$protocol-SENDTO:$ip_address:$dest_port\"'"
 fi
 
 echo "Running command: $final_command"

@@ -2,18 +2,22 @@
 
 # Check if a single parameter is provided
 if [ $# -ne 1 ]; then
-    echo "Usage: $0 <protocol-source_ns-source_port-dest_ns-dest_port>"
+    echo "Usage: $0 <protocol-source_ns-source_port-dest_ns-dest_port[-ip_address]>"
     exit 1
 fi
 
 # Split the parameter by "-"
-IFS='-' read -r protocol source_ns source_port dest_ns dest_port <<< "$1"
+IFS='-' read -r protocol source_ns source_port dest_ns dest_port ip_address <<< "$1"
 
-# Validate that we have exactly 5 parts
+# Validate that we have at least 5 parts
 if [ -z "$protocol" ] || [ -z "$source_ns" ] || [ -z "$source_port" ] || [ -z "$dest_ns" ] || [ -z "$dest_port" ]; then
-    echo "Error: Invalid parameter format. Correct format is <protocol-source_ns-source_port-dest_ns-dest_port>"
+    echo "Error: Invalid parameter format. Correct format is <protocol-source_ns-source_port-dest_ns-dest_port[-ip_address]>"
     exit 1
 fi
 
 # Call the socat-netns script with the extracted parameters
-socat-netns "$protocol" "$source_ns" "$source_port" "$dest_ns" "$dest_port"
+if [ -n "$ip_address" ]; then
+    socat-netns "$protocol" "$source_ns" "$source_port" "$dest_ns" "$dest_port" "$ip_address"
+else
+    socat-netns "$protocol" "$source_ns" "$source_port" "$dest_ns" "$dest_port"
+fi

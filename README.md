@@ -11,7 +11,7 @@ Run `sudo make install`.
 
 The script usage is:
 
-    socat-netns <protocol> <source netns or 'default'> <source port> <destination netns or 'default'> <destination port>
+    socat-netns <protocol> <source netns or 'default'> <source port> <destination netns or 'default'> <destination port> [<destination ip address>]
 
 - protocol can be either `tcp` or `udp`
 - the source netns or destination netns can be set to `default` to specify the default network namespace.
